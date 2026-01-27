@@ -2,6 +2,13 @@
 
 A new Flutter project.
 
+## Build requirements (Android)
+
+- JDK 17 is required for Android builds.
+- In Android Studio, set **Settings > Build, Execution, Deployment > Build Tools > Gradle > Gradle JDK** to a JDK 17 install.
+- Or set `JAVA_HOME` before running Gradle/Flutter:
+  - PowerShell: `$env:JAVA_HOME="C:\\Path\\To\\JDK17"`
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.
