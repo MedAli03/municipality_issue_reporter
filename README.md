@@ -8,6 +8,7 @@ A new Flutter project.
 - In Android Studio, set **Settings > Build, Execution, Deployment > Build Tools > Gradle > Gradle JDK** to a JDK 17 install.
 - Or set `JAVA_HOME` before running Gradle/Flutter:
   - PowerShell: `$env:JAVA_HOME="C:\\Path\\To\\JDK17"`
+- You can also set `org.gradle.java.home` in `android/gradle.properties` to pin Gradle to JDK 17.
 
 ## Getting Started
 

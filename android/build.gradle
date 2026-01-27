@@ -25,9 +25,8 @@ allprojects {
 
 rootProject.buildDir = "../build"
 subprojects {
+    project.ext.flutter = rootProject.ext.flutter
     project.buildDir = "${rootProject.buildDir}/${project.name}"
-}
-subprojects {
     project.evaluationDependsOn(":app")
 }
 
