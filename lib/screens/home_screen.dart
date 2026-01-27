@@ -4,10 +4,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../app.dart';
-import 'pick_location_screen.dart';
+import '../models/report_draft.dart';
+import 'create_report_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,7 +18,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final Future<SmokeTestResult> _smokeTestFuture;
-  LatLng? _selectedLocation;
+  ReportDraft? _latestDraft;
 
   @override
   void initState() {
@@ -77,28 +77,43 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  _selectedLocation == null
-                      ? 'No location selected.'
-                      : 'Selected location: '
-                          '${_selectedLocation!.latitude.toStringAsFixed(5)}, '
-                          '${_selectedLocation!.longitude.toStringAsFixed(5)}',
+                  _latestDraft == null
+                      ? 'No draft saved yet.'
+                      : 'Draft: ${_latestDraft!.title}',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
+                if (_latestDraft != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '${_latestDraft!.governorate} · ${_latestDraft!.city}',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _latestDraft!.latitude != null &&
+                            _latestDraft!.longitude != null
+                        ? 'Coordinates: '
+                            '${_latestDraft!.latitude!.toStringAsFixed(6)}, '
+                            '${_latestDraft!.longitude!.toStringAsFixed(6)}'
+                        : 'No coordinates',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ],
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () async {
-                    final result = await Navigator.of(context).push<LatLng>(
+                    final result = await Navigator.of(context).push<ReportDraft>(
                       MaterialPageRoute(
-                        builder: (context) => const PickLocationScreen(),
+                        builder: (context) => const CreateReportScreen(),
                       ),
                     );
                     if (result != null) {
                       setState(() {
-                        _selectedLocation = result;
+                        _latestDraft = result;
                       });
                     }
                   },
-                  child: const Text('Pick location'),
+                  child: const Text('New report'),
                 ),
               ],
             ),
