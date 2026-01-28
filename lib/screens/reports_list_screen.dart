@@ -33,16 +33,19 @@ class ReportsListScreen extends StatelessWidget {
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final report = reports[index];
+              final hasPhoto = report.photoPath != null;
+              final hasLocation =
+                  report.latitude != null && report.longitude != null;
               return ListTile(
                 title: Text(report.title),
-                subtitle: Text('${report.governorate} · ${report.city}'),
+                subtitle: Text(_formatDate(report.createdAt)),
                 trailing: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(report.status),
+                    Text(hasPhoto ? 'Photo ✓' : 'No photo'),
                     const SizedBox(height: 4),
-                    Text(_formatDate(report.createdAt)),
+                    Text(hasLocation ? 'Location ✓' : 'No location'),
                   ],
                 ),
                 onTap: () {

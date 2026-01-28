@@ -19,21 +19,17 @@ class ReportDetailsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           _InfoRow(label: 'Title', value: report.title),
-          _InfoRow(label: 'Status', value: report.status),
           _InfoRow(label: 'Description', value: report.description),
-          _InfoRow(label: 'Governorate', value: report.governorate),
-          _InfoRow(label: 'City/Delegation', value: report.city),
-          _InfoRow(label: 'Landmark', value: report.landmark ?? '—'),
+          _InfoRow(
+            label: 'Created',
+            value: report.createdAt.toLocal().toString(),
+          ),
           _InfoRow(
             label: 'Coordinates',
             value: report.latitude != null && report.longitude != null
                 ? '${report.latitude!.toStringAsFixed(6)}, '
                     '${report.longitude!.toStringAsFixed(6)}'
                 : '—',
-          ),
-          _InfoRow(
-            label: 'Created',
-            value: report.createdAt.toLocal().toString(),
           ),
           const SizedBox(height: 16),
           Text(

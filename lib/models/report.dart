@@ -8,13 +8,9 @@ class Report extends HiveObject {
     required this.id,
     required this.title,
     required this.description,
-    required this.governorate,
-    required this.city,
-    this.landmark,
+    this.photoPath,
     this.latitude,
     this.longitude,
-    this.photoPath,
-    required this.status,
     required this.createdAt,
   });
 
@@ -28,26 +24,14 @@ class Report extends HiveObject {
   final String description;
 
   @HiveField(3)
-  final String governorate;
-
-  @HiveField(4)
-  final String city;
-
-  @HiveField(5)
-  final String? landmark;
-
-  @HiveField(6)
-  final double? latitude;
-
-  @HiveField(7)
-  final double? longitude;
-
-  @HiveField(8)
   final String? photoPath;
 
-  @HiveField(9)
-  final String status;
+  @HiveField(4)
+  final double? latitude;
 
-  @HiveField(10)
+  @HiveField(5)
+  final double? longitude;
+
+  @HiveField(6)
   final DateTime createdAt;
 }

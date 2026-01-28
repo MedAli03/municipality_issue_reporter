@@ -22,16 +22,13 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _governorateController = TextEditingController();
-  final _cityController = TextEditingController();
-  final _landmarkController = TextEditingController();
-  final _latitudeController = TextEditingController();
-  final _longitudeController = TextEditingController();
   final _locationService = LocationService();
   final _photoService = PhotoService();
   final _uuid = const Uuid();
 
   String? _photoPath;
+  double? _latitude;
+  double? _longitude;
   bool _saving = false;
   bool _loadingLocation = false;
 
@@ -39,11 +36,6 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
-    _governorateController.dispose();
-    _cityController.dispose();
-    _landmarkController.dispose();
-    _latitudeController.dispose();
-    _longitudeController.dispose();
     super.dispose();
   }
 
@@ -78,80 +70,6 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                 minLength: 10,
               ),
             ),
-            TextFormField(
-              controller: _governorateController,
-              decoration: const InputDecoration(labelText: 'Governorate'),
-              textInputAction: TextInputAction.next,
-              validator: (value) => validateRequired(
-                value,
-                fieldName: 'Governorate',
-                minLength: 2,
-              ),
-            ),
-            TextFormField(
-              controller: _cityController,
-              decoration: const InputDecoration(labelText: 'City/Delegation'),
-              textInputAction: TextInputAction.next,
-              validator: (value) => validateRequired(
-                value,
-                fieldName: 'City/Delegation',
-                minLength: 2,
-              ),
-            ),
-            TextFormField(
-              controller: _landmarkController,
-              decoration: const InputDecoration(labelText: 'Landmark (optional)'),
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _latitudeController,
-              decoration: const InputDecoration(labelText: 'Latitude (optional)'),
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-                signed: true,
-              ),
-              validator: (value) {
-                final pairError = validateLatLngPair(
-                  lat: value,
-                  lng: _longitudeController.text,
-                );
-                if (pairError != null) {
-                  return pairError;
-                }
-                return validateLatitude(value);
-              },
-            ),
-            TextFormField(
-              controller: _longitudeController,
-              decoration: const InputDecoration(labelText: 'Longitude (optional)'),
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-                signed: true,
-              ),
-              validator: (value) {
-                final pairError = validateLatLngPair(
-                  lat: _latitudeController.text,
-                  lng: value,
-                );
-                if (pairError != null) {
-                  return pairError;
-                }
-                return validateLongitude(value);
-              },
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: _loadingLocation ? null : _useGps,
-              icon: _loadingLocation
-                  ? const SizedBox(
-                      height: 16,
-                      width: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.my_location),
-              label: const Text('Use my GPS'),
-            ),
             const SizedBox(height: 16),
             Text(
               'Photo',
@@ -159,20 +77,35 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
             ),
             const SizedBox(height: 8),
             if (_photoPath != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.file(
-                  File(_photoPath!),
-                  height: 160,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Text(
-                    'Photo unavailable (file missing).',
+              Stack(
+                alignment: Alignment.topRight,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(
+                      File(_photoPath!),
+                      height: 180,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox(
+                        height: 180,
+                        child: Center(child: Text('Photo unavailable.')),
+                      ),
+                    ),
                   ),
-                ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () {
+                      setState(() {
+                        _photoPath = null;
+                      });
+                    },
+                  ),
+                ],
               )
             else
               Container(
-                height: 160,
+                height: 180,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey.shade400),
@@ -180,10 +113,48 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                 child: const Center(child: Text('No photo selected')),
               ),
             const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: _pickPhoto,
-              icon: const Icon(Icons.add_a_photo),
-              label: Text(_photoPath == null ? 'Add photo' : 'Change photo'),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _pickFromGallery,
+                    icon: const Icon(Icons.photo_library),
+                    label: const Text('Pick from gallery'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _openCamera,
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('Open camera'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Location',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _latitude != null && _longitude != null
+                  ? 'Lat: ${_latitude!.toStringAsFixed(6)}, '
+                      'Lng: ${_longitude!.toStringAsFixed(6)}'
+                  : 'No location captured.',
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              onPressed: _loadingLocation ? null : _getLocation,
+              icon: _loadingLocation
+                  ? const SizedBox(
+                      height: 16,
+                      width: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.my_location),
+              label: const Text('Get my location'),
             ),
             const SizedBox(height: 24),
             FilledButton(
@@ -202,15 +173,35 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
     );
   }
 
-  Future<void> _useGps() async {
+  Future<void> _pickFromGallery() async {
+    final path = await _photoService.pickFromGallery();
+    if (path != null && mounted) {
+      setState(() {
+        _photoPath = path;
+      });
+    }
+  }
+
+  Future<void> _openCamera() async {
+    final path = await _photoService.pickFromCamera();
+    if (path != null && mounted) {
+      setState(() {
+        _photoPath = path;
+      });
+    }
+  }
+
+  Future<void> _getLocation() async {
     setState(() {
       _loadingLocation = true;
     });
     try {
       final position = await _locationService.getCurrentPositionWithPermission();
       if (position != null) {
-        _latitudeController.text = position.latitude.toStringAsFixed(6);
-        _longitudeController.text = position.longitude.toStringAsFixed(6);
+        setState(() {
+          _latitude = position.latitude;
+          _longitude = position.longitude;
+        });
       }
     } catch (error) {
       _showSnackBar(error.toString());
@@ -220,48 +211,6 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
           _loadingLocation = false;
         });
       }
-    }
-  }
-
-  Future<void> _pickPhoto() async {
-    final source = await showModalBottomSheet<_PhotoSource>(
-      context: context,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text('Camera'),
-                onTap: () => Navigator.of(context).pop(_PhotoSource.camera),
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Gallery'),
-                onTap: () => Navigator.of(context).pop(_PhotoSource.gallery),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-
-    if (source == null) {
-      return;
-    }
-
-    String? path;
-    if (source == _PhotoSource.camera) {
-      path = await _photoService.pickFromCamera();
-    } else {
-      path = await _photoService.pickFromGallery();
-    }
-
-    if (path != null && mounted) {
-      setState(() {
-        _photoPath = path;
-      });
     }
   }
 
@@ -276,26 +225,13 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
     });
 
     try {
-      final latitude = _latitudeController.text.trim().isEmpty
-          ? null
-          : double.tryParse(_latitudeController.text.trim());
-      final longitude = _longitudeController.text.trim().isEmpty
-          ? null
-          : double.tryParse(_longitudeController.text.trim());
-
       final report = Report(
         id: _uuid.v4(),
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
-        governorate: _governorateController.text.trim(),
-        city: _cityController.text.trim(),
-        landmark: _landmarkController.text.trim().isEmpty
-            ? null
-            : _landmarkController.text.trim(),
-        latitude: latitude,
-        longitude: longitude,
         photoPath: _photoPath,
-        status: 'pending',
+        latitude: _latitude,
+        longitude: _longitude,
         createdAt: DateTime.now(),
       );
 
@@ -305,6 +241,10 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
       if (!mounted) {
         return;
       }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Report saved')),
+      );
 
       await Navigator.of(context).pushReplacement(
         MaterialPageRoute(
@@ -328,5 +268,3 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
     );
   }
 }
-
-enum _PhotoSource { camera, gallery }

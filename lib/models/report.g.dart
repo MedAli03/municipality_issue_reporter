@@ -17,21 +17,17 @@ class ReportAdapter extends TypeAdapter<Report> {
       id: fields[0] as String,
       title: fields[1] as String,
       description: fields[2] as String,
-      governorate: fields[3] as String,
-      city: fields[4] as String,
-      landmark: fields[5] as String?,
-      latitude: fields[6] as double?,
-      longitude: fields[7] as double?,
-      photoPath: fields[8] as String?,
-      status: fields[9] as String,
-      createdAt: fields[10] as DateTime,
+      photoPath: fields[3] as String?,
+      latitude: fields[4] as double?,
+      longitude: fields[5] as double?,
+      createdAt: fields[6] as DateTime,
     );
   }
 
   @override
   void write(BinaryWriter writer, Report obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -39,20 +35,12 @@ class ReportAdapter extends TypeAdapter<Report> {
       ..writeByte(2)
       ..write(obj.description)
       ..writeByte(3)
-      ..write(obj.governorate)
-      ..writeByte(4)
-      ..write(obj.city)
-      ..writeByte(5)
-      ..write(obj.landmark)
-      ..writeByte(6)
-      ..write(obj.latitude)
-      ..writeByte(7)
-      ..write(obj.longitude)
-      ..writeByte(8)
       ..write(obj.photoPath)
-      ..writeByte(9)
-      ..write(obj.status)
-      ..writeByte(10)
+      ..writeByte(4)
+      ..write(obj.latitude)
+      ..writeByte(5)
+      ..write(obj.longitude)
+      ..writeByte(6)
       ..write(obj.createdAt);
   }
 

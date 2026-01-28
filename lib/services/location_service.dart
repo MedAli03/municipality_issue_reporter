@@ -14,7 +14,9 @@ class LocationService {
     }
 
     if (permission.isPermanentlyDenied) {
-      throw Exception('Location permission permanently denied.');
+      throw Exception(
+        'Location permission permanently denied. Please enable it in settings.',
+      );
     }
 
     if (!permission.isGranted) {
