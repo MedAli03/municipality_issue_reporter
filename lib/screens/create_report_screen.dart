@@ -1,9 +1,15 @@
-import 'package:geolocator/geolocator.dart';
-import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'dart:io';
 
-import '../models/report_draft.dart';
+import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
+import 'package:uuid/uuid.dart';
+
+import '../models/report.dart';
+import '../services/location_service.dart';
+import '../services/photo_service.dart';
+import '../storage/hive_boxes.dart';
 import '../utils/validators.dart';
+import 'reports_list_screen.dart';
 
 class CreateReportScreen extends StatefulWidget {
   const CreateReportScreen({super.key});
@@ -18,9 +24,16 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
   final _descriptionController = TextEditingController();
   final _governorateController = TextEditingController();
   final _cityController = TextEditingController();
-  final _streetController = TextEditingController();
+  final _landmarkController = TextEditingController();
   final _latitudeController = TextEditingController();
   final _longitudeController = TextEditingController();
+  final _locationService = LocationService();
+  final _photoService = PhotoService();
+  final _uuid = const Uuid();
+
+  String? _photoPath;
+  bool _saving = false;
+  bool _loadingLocation = false;
 
   @override
   void dispose() {
@@ -28,7 +41,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
     _descriptionController.dispose();
     _governorateController.dispose();
     _cityController.dispose();
-    _streetController.dispose();
+    _landmarkController.dispose();
     _latitudeController.dispose();
     _longitudeController.dispose();
     super.dispose();
@@ -38,7 +51,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Report (draft)'),
+        title: const Text('Create Report'),
       ),
       body: Form(
         key: _formKey,
@@ -86,14 +99,14 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
               ),
             ),
             TextFormField(
-              controller: _streetController,
-              decoration: const InputDecoration(labelText: 'Street / Landmark'),
+              controller: _landmarkController,
+              decoration: const InputDecoration(labelText: 'Landmark (optional)'),
               textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: 8),
             TextFormField(
               controller: _latitudeController,
-              decoration: const InputDecoration(labelText: 'Latitude'),
+              decoration: const InputDecoration(labelText: 'Latitude (optional)'),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
                 signed: true,
@@ -111,7 +124,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
             ),
             TextFormField(
               controller: _longitudeController,
-              decoration: const InputDecoration(labelText: 'Longitude'),
+              decoration: const InputDecoration(labelText: 'Longitude (optional)'),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
                 signed: true,
@@ -128,14 +141,60 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
               },
             ),
             const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: _useGps,
-              child: const Text('Use my GPS'),
+            ElevatedButton.icon(
+              onPressed: _loadingLocation ? null : _useGps,
+              icon: _loadingLocation
+                  ? const SizedBox(
+                      height: 16,
+                      width: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.my_location),
+              label: const Text('Use my GPS'),
             ),
+            const SizedBox(height: 16),
+            Text(
+              'Photo',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            if (_photoPath != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  File(_photoPath!),
+                  height: 160,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Text(
+                    'Photo unavailable (file missing).',
+                  ),
+                ),
+              )
+            else
+              Container(
+                height: 160,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade400),
+                ),
+                child: const Center(child: Text('No photo selected')),
+              ),
             const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: _saveDraft,
-              child: const Text('Save draft'),
+            OutlinedButton.icon(
+              onPressed: _pickPhoto,
+              icon: const Icon(Icons.add_a_photo),
+              label: Text(_photoPath == null ? 'Add photo' : 'Change photo'),
+            ),
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: _saving ? null : _saveReport,
+              child: _saving
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Save report'),
             ),
           ],
         ),
@@ -144,65 +203,123 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
   }
 
   Future<void> _useGps() async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      _showSnackBar('Location services are disabled.');
-      return;
-    }
-
-    var permission = await Permission.locationWhenInUse.status;
-    if (!permission.isGranted) {
-      permission = await Permission.locationWhenInUse.request();
-    }
-
-    if (permission.isPermanentlyDenied) {
-      _showSnackBar('Enable location permission in settings.');
-      return;
-    }
-
-    if (!permission.isGranted) {
-      _showSnackBar('Location permission denied.');
-      return;
-    }
-
+    setState(() {
+      _loadingLocation = true;
+    });
     try {
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-      _latitudeController.text = position.latitude.toStringAsFixed(6);
-      _longitudeController.text = position.longitude.toStringAsFixed(6);
-      _showSnackBar('GPS location filled');
+      final position = await _locationService.getCurrentPositionWithPermission();
+      if (position != null) {
+        _latitudeController.text = position.latitude.toStringAsFixed(6);
+        _longitudeController.text = position.longitude.toStringAsFixed(6);
+      }
     } catch (error) {
-      _showSnackBar('Unable to fetch current location.');
+      _showSnackBar(error.toString());
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingLocation = false;
+        });
+      }
     }
   }
 
-  void _saveDraft() {
+  Future<void> _pickPhoto() async {
+    final source = await showModalBottomSheet<_PhotoSource>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Camera'),
+                onTap: () => Navigator.of(context).pop(_PhotoSource.camera),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Gallery'),
+                onTap: () => Navigator.of(context).pop(_PhotoSource.gallery),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (source == null) {
+      return;
+    }
+
+    String? path;
+    if (source == _PhotoSource.camera) {
+      path = await _photoService.pickFromCamera();
+    } else {
+      path = await _photoService.pickFromGallery();
+    }
+
+    if (path != null && mounted) {
+      setState(() {
+        _photoPath = path;
+      });
+    }
+  }
+
+  Future<void> _saveReport() async {
     final isValid = _formKey.currentState?.validate() ?? false;
     if (!isValid) {
       return;
     }
 
-    final latitude = _latitudeController.text.trim().isEmpty
-        ? null
-        : double.tryParse(_latitudeController.text.trim());
-    final longitude = _longitudeController.text.trim().isEmpty
-        ? null
-        : double.tryParse(_longitudeController.text.trim());
+    setState(() {
+      _saving = true;
+    });
 
-    final draft = ReportDraft(
-      title: _titleController.text.trim(),
-      description: _descriptionController.text.trim(),
-      governorate: _governorateController.text.trim(),
-      city: _cityController.text.trim(),
-      street: _streetController.text.trim().isEmpty
+    try {
+      final latitude = _latitudeController.text.trim().isEmpty
           ? null
-          : _streetController.text.trim(),
-      latitude: latitude,
-      longitude: longitude,
-    );
+          : double.tryParse(_latitudeController.text.trim());
+      final longitude = _longitudeController.text.trim().isEmpty
+          ? null
+          : double.tryParse(_longitudeController.text.trim());
 
-    Navigator.of(context).pop(draft);
+      final report = Report(
+        id: _uuid.v4(),
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        governorate: _governorateController.text.trim(),
+        city: _cityController.text.trim(),
+        landmark: _landmarkController.text.trim().isEmpty
+            ? null
+            : _landmarkController.text.trim(),
+        latitude: latitude,
+        longitude: longitude,
+        photoPath: _photoPath,
+        status: 'pending',
+        createdAt: DateTime.now(),
+      );
+
+      final box = Hive.box<Report>(reportsBoxName);
+      await box.put(report.id, report);
+
+      if (!mounted) {
+        return;
+      }
+
+      await Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const ReportsListScreen(),
+        ),
+      );
+    } catch (error) {
+      _showSnackBar('Unable to save report: $error');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+        });
+      }
+    }
   }
 
   void _showSnackBar(String message) {
@@ -211,3 +328,5 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
     );
   }
 }
+
+enum _PhotoSource { camera, gallery }
