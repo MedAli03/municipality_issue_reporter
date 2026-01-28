@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
+import '../localization/app_localizations.dart';
 import '../models/report.dart';
 import '../services/location_service.dart';
 import '../services/photo_service.dart';
@@ -41,9 +42,10 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Report'),
+        title: Text(localizations.newReport),
       ),
       body: Form(
         key: _formKey,
@@ -52,27 +54,28 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
           children: [
             TextFormField(
               controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Title'),
+              decoration: InputDecoration(labelText: localizations.titleLabel),
               textInputAction: TextInputAction.next,
               validator: (value) => validateRequired(
                 value,
-                fieldName: 'Title',
+                fieldName: localizations.titleLabel,
                 minLength: 5,
               ),
             ),
             TextFormField(
               controller: _descriptionController,
-              decoration: const InputDecoration(labelText: 'Description'),
+              decoration:
+                  InputDecoration(labelText: localizations.descriptionLabel),
               maxLines: 4,
               validator: (value) => validateRequired(
                 value,
-                fieldName: 'Description',
+                fieldName: localizations.descriptionLabel,
                 minLength: 10,
               ),
             ),
             const SizedBox(height: 16),
             Text(
-              'Photo',
+              localizations.photoLabel,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
@@ -87,14 +90,17 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                       height: 180,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const SizedBox(
+                      errorBuilder: (_, __, ___) => SizedBox(
                         height: 180,
-                        child: Center(child: Text('Photo unavailable.')),
+                        child: Center(
+                          child: Text(localizations.photoMissing),
+                        ),
                       ),
                     ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
+                    tooltip: localizations.removeImage,
                     onPressed: () {
                       setState(() {
                         _photoPath = null;
@@ -110,7 +116,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey.shade400),
                 ),
-                child: const Center(child: Text('No photo selected')),
+                child: Center(child: Text(localizations.photoStatusMissing)),
               ),
             const SizedBox(height: 12),
             Row(
@@ -119,7 +125,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                   child: OutlinedButton.icon(
                     onPressed: _pickFromGallery,
                     icon: const Icon(Icons.photo_library),
-                    label: const Text('Pick from gallery'),
+                    label: Text(localizations.pickFromGallery),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -127,22 +133,24 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                   child: OutlinedButton.icon(
                     onPressed: _openCamera,
                     icon: const Icon(Icons.camera_alt),
-                    label: const Text('Open camera'),
+                    label: Text(localizations.openCamera),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 20),
             Text(
-              'Location',
+              localizations.locationLabel,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             Text(
               _latitude != null && _longitude != null
-                  ? 'Lat: ${_latitude!.toStringAsFixed(6)}, '
-                      'Lng: ${_longitude!.toStringAsFixed(6)}'
-                  : 'No location captured.',
+                  ? localizations.locationCaptured(
+                      lat: _latitude!.toStringAsFixed(6),
+                      lng: _longitude!.toStringAsFixed(6),
+                    )
+                  : localizations.noLocation,
             ),
             const SizedBox(height: 8),
             ElevatedButton.icon(
@@ -154,18 +162,18 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.my_location),
-              label: const Text('Get my location'),
+              label: Text(localizations.getLocation),
             ),
             const SizedBox(height: 24),
             FilledButton(
-              onPressed: _saving ? null : _saveReport,
+              onPressed: _saving ? null : _confirmSaveReport,
               child: _saving
                   ? const SizedBox(
                       height: 18,
                       width: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Save report'),
+                  : Text(localizations.saveReport),
             ),
           ],
         ),
@@ -204,7 +212,16 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
         });
       }
     } catch (error) {
-      _showSnackBar(error.toString());
+      if (!mounted) {
+        return;
+      }
+      final localizations = AppLocalizations.of(context);
+      final message = error.toString().contains('permission')
+          ? localizations.permissionDenied
+          : error.toString().contains('services')
+              ? localizations.locationServicesDisabled
+              : error.toString();
+      _showSnackBar(message);
     } finally {
       if (mounted) {
         setState(() {
@@ -212,6 +229,33 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
         });
       }
     }
+  }
+
+  Future<void> _confirmSaveReport() async {
+    final localizations = AppLocalizations.of(context);
+    final shouldSave = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(localizations.confirmSubmit),
+        content: Text(localizations.confirmSubmitMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(localizations.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(localizations.confirm),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldSave != true) {
+      return;
+    }
+
+    await _saveReport();
   }
 
   Future<void> _saveReport() async {
@@ -242,8 +286,9 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
         return;
       }
 
+      final localizations = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Report saved')),
+        SnackBar(content: Text(localizations.reportSaved)),
       );
 
       await Navigator.of(context).pushReplacement(
@@ -252,7 +297,8 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
         ),
       );
     } catch (error) {
-      _showSnackBar('Unable to save report: $error');
+      final localizations = AppLocalizations.of(context);
+      _showSnackBar('${localizations.saveFailed} $error');
     } finally {
       if (mounted) {
         setState(() {

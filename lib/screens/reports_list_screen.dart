@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
+import '../localization/app_localizations.dart';
 import '../models/report.dart';
 import '../storage/hive_boxes.dart';
 import 'report_details_screen.dart';
@@ -10,11 +11,12 @@ class ReportsListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     final box = Hive.box<Report>(reportsBoxName);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Reports'),
+        title: Text(localizations.myReports),
       ),
       body: ValueListenableBuilder<Box<Report>>(
         valueListenable: box.listenable(),
@@ -23,8 +25,27 @@ class ReportsListScreen extends StatelessWidget {
             ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
           if (reports.isEmpty) {
-            return const Center(
-              child: Text('No reports yet.'),
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.inbox,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    localizations.noReports,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    localizations.noReportsHint,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             );
           }
 
@@ -38,14 +59,24 @@ class ReportsListScreen extends StatelessWidget {
                   report.latitude != null && report.longitude != null;
               return ListTile(
                 title: Text(report.title),
-                subtitle: Text(_formatDate(report.createdAt)),
+                subtitle: Text(
+                  '${localizations.createdAt}: ${_formatDate(report.createdAt)}',
+                ),
                 trailing: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(hasPhoto ? 'Photo ✓' : 'No photo'),
+                    Text(
+                      hasPhoto
+                          ? localizations.photoStatusPresent
+                          : localizations.photoStatusMissing,
+                    ),
                     const SizedBox(height: 4),
-                    Text(hasLocation ? 'Location ✓' : 'No location'),
+                    Text(
+                      hasLocation
+                          ? localizations.locationStatusPresent
+                          : localizations.locationStatusMissing,
+                    ),
                   ],
                 ),
                 onTap: () {

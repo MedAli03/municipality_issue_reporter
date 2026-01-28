@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../localization/app_localizations.dart';
 import '../models/report.dart';
 
 class ReportDetailsScreen extends StatelessWidget {
@@ -11,29 +12,35 @@ class ReportDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Report Details'),
+        title: Text(localizations.detailsTitle),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _InfoRow(label: 'Title', value: report.title),
-          _InfoRow(label: 'Description', value: report.description),
+          _InfoRow(label: localizations.titleLabel, value: report.title),
           _InfoRow(
-            label: 'Created',
+            label: localizations.descriptionLabel,
+            value: report.description,
+          ),
+          _InfoRow(
+            label: localizations.createdAt,
             value: report.createdAt.toLocal().toString(),
           ),
           _InfoRow(
-            label: 'Coordinates',
+            label: localizations.locationLabel,
             value: report.latitude != null && report.longitude != null
-                ? '${report.latitude!.toStringAsFixed(6)}, '
-                    '${report.longitude!.toStringAsFixed(6)}'
-                : '—',
+                ? localizations.locationCaptured(
+                    lat: report.latitude!.toStringAsFixed(6),
+                    lng: report.longitude!.toStringAsFixed(6),
+                  )
+                : localizations.noLocation,
           ),
           const SizedBox(height: 16),
           Text(
-            'Photo',
+            localizations.photoLabel,
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
@@ -54,8 +61,8 @@ class ReportDetailsScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey.shade400),
               ),
-              child: const Center(
-                child: Text('No photo available'),
+              child: Center(
+                child: Text(localizations.photoMissing),
               ),
             ),
         ],
