@@ -8,6 +8,9 @@ A new Flutter project.
 - In Android Studio, set **Settings > Build, Execution, Deployment > Build Tools > Gradle > Gradle JDK** to a JDK 17 install.
 - Or set `JAVA_HOME` before running Gradle/Flutter:
   - PowerShell: `$env:JAVA_HOME="C:\\Path\\To\\JDK17"`
+- You can also set `org.gradle.java.home` in `android/gradle.properties` to pin Gradle to JDK 17.
+- Firebase integration is postponed to the final step; no `google-services.json` is needed right now.
+- Generate Hive adapters with: `flutter pub run build_runner build --delete-conflicting-outputs`.
 
 ## Getting Started
 
