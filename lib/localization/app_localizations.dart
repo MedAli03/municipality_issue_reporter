@@ -62,6 +62,25 @@ class AppLocalizations {
   String get photoStatusMissing => _lookup('photo_status_missing');
   String get locationStatusPresent => _lookup('location_status_present');
   String get locationStatusMissing => _lookup('location_status_missing');
+  String get adminLogin => _lookup('admin_login');
+  String get admin => _lookup('admin');
+  String get pin => _lookup('pin');
+  String get enterPin => _lookup('enter_pin');
+  String get login => _lookup('login');
+  String get logout => _lookup('logout');
+  String get wrongPin => _lookup('wrong_pin');
+  String get adminDashboard => _lookup('admin_dashboard');
+  String get reports => _lookup('reports');
+  String get settings => _lookup('settings');
+  String get changePin => _lookup('change_pin');
+  String get currentPin => _lookup('current_pin');
+  String get newPin => _lookup('new_pin');
+  String get confirmNewPin => _lookup('confirm_new_pin');
+  String get save => _lookup('save');
+  String get pinChanged => _lookup('pin_changed');
+  String get requiredField => _lookup('required_field');
+  String get pinMinLength => _lookup('pin_min_length');
+  String get pinMismatch => _lookup('pin_mismatch');
 
   String locationCaptured({required String lat, required String lng}) {
     return _lookup('location_captured')
