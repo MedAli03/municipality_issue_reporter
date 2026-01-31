@@ -2,6 +2,10 @@
 
 part of 'report.dart';
 
+// **************************************************************************
+// TypeAdapterGenerator
+// **************************************************************************
+
 class ReportAdapter extends TypeAdapter<Report> {
   @override
   final int typeId = 1;
@@ -10,8 +14,7 @@ class ReportAdapter extends TypeAdapter<Report> {
   Report read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
-      for (int i = 0; i < numOfFields; i++)
-        reader.readByte(): reader.read(),
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return Report(
       id: fields[0] as String,
