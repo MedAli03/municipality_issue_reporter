@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../localization/app_localizations.dart';
+import '../services/admin_auth_service.dart';
+import 'admin_dashboard_screen.dart';
+import 'admin_login_screen.dart';
 import 'create_report_screen.dart';
 import 'reports_list_screen.dart';
 
@@ -19,6 +22,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final _adminAuthService = AdminAuthService();
+
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
@@ -74,8 +79,28 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               child: Text(localizations.myReports),
             ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: _openAdmin,
+              child: Text(localizations.adminLogin),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _openAdmin() async {
+    final isLoggedIn = await _adminAuthService.isLoggedIn();
+    if (!mounted) {
+      return;
+    }
+    final destination = isLoggedIn
+        ? const AdminDashboardScreen()
+        : const AdminLoginScreen();
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => destination,
       ),
     );
   }
